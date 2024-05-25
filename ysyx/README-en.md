@@ -86,71 +86,73 @@ In order to use `main.py` to test, you need:
 * Add `ysyx_[8-bit student number]_` prefix to all `define` of CPU, this is to avoid the occurence of multiple students' core variable definitions with the same name during the back-end physical design.
 * **Put the modified `ysyx_[8-bit student number].v`, such as `ysyx_22040228.v` in the `./soc` directory.**
 * Set `stud_id` in `main.py` to **8-bit student number**, for example, for a student with number 22040228, set `stud_id='22040228'`.
-> Note: The students who use Verilog/SystemVerilog should delete or comment all `include` lines when they merge codes, and make sure all codes and parameter definitions for the core are only in the `ysyx_[8-bit student number].v` file.
-> 注意：使用Verilog/SystemVerilog开发的同学在合并代码时要删除或注释掉`include`行，要保证核的所有代码和参数定义都在且仅在`ysyx_8位学号.v`文件中。同时删除或注释掉接入difftest时可能引入的DPI-C函数。合并代码的具体操作可以自己写个脚本实现。
+> Note: The students who use Verilog/SystemVerilog should delete or comment all `include` lines when they merge codes, and make sure all codes and parameter definitions for the core are only in the `ysyx_[8-bit student number].v` file. At the same time, delete or comment the DPI-C functions that may be introduced when connecting to difftest. The specific operation of merging codes can be implemented by writing a script yourself.
 
-## 命名规范检查(北京时间 2022/10/07 23:59:59前完成)
-运行脚本执行命名规范检查，该脚本会检查同学们实现的.v文件是否符合命名规范，并会生成日志文件`check.log`。可执行的测试环境为`Debian10`、`Ubuntu 20.04`、`WSL2-Ubuntu 20.04`和`Windows10`。
-* 在当前目录下运行`./main.py -s`。
-* 最后可以在终端看到检查结果，如果检查通过，则会在终端打印出：
+## Naming Specification Check (Completed before 2022/10/07 23:59:59, Beijing time)
+Run the script to perform the naming specification check. The script will check whether the .v file implemented by the students meets the naming specification and generate the log file `check.log`. The executable test environments are `Debian10`, `Ubuntu 20.04`, `WSL2-Ubuntu 20.04` and `Windows10`.
+* Run `./main.py -s` in the current directory.
+* Finally, you can see the check results in the terminal. If the check passes, it will be printed out in the terminal:
     ```sh
     $> Your core is FINE in module name and signal interface
     ```
-* 同时，在该`./stand`下会生成日志文件`check.log`。如果检测未通过，则会给出错误信息，并提示是`module name`错误还是`signal interface`错误。也可以打开⽣成的`check.log`日志⽂件查看报错原因和提示。
-> 注意：处理器核的端口定义要严格按照[CPU端口命名规范](./stand/interface.md)来修改，**不能在端口中有多余的注释，不能在`input`和`output`后加多余的`wire`。另外接口中也不允许有其他的自定义信号**，否则可能会导致后续的测试出现问题。另外一生一芯四期SoC采用共享SRAM的方法实现Cache，所以需在CPU端口中额外添加8组SRAM接口，具体方法见下[CPU内部修改](#cpu内部修改北京时间-20221007-235959前完成)。
+* At the same time, the log file `check.log` will be generated under the `./stand`. If the test fails, an error message will be given and whether it is a `module name` error or a `signal interface` error. You can also open the generated `check.log` log file to view the error reason and prompts.
+> Note: The port definition of the processor core must be modified strictly in accordance with the [CPU port naming convention](./stand/interface.md). **There can be no redundant comments in the port, nor between `input` and `output` Add extra `wire` after it. In addition, other custom signals are not allowed in the interface**, otherwise it may cause problems in subsequent tests. In addition, the One Student One Chip 4th SoC uses the shared SRAM method to implement Cache, so 8 additional sets of SRAM interfaces need to be added to the CPU port. The specific method is as follows [CPU Internal Modification](#cpu-internal-modification-completed-before-20221007-235959-beijing-time).
 
-## CPU内部修改(北京时间 2022/10/07 23:59:59前完成)
-* 所有触发器都需要带复位端，使其复位后带初值。
-    * **Chisel福利：可以通过以下命令对编译生成的`.fir`文件进行扫描，找出不带复位端的寄存器：**
+## CPU Internal Modification (Completed before 2022/10/07 23:59:59, Beijing time)
+* All triggers need to have a reset port so that they have an initial value after reset.
+    * **Chisel welfare: You can use the following command to scan the compiled `.fir` file to find the registers without reset port:**
     ```sh
     $> grep -rn "^ *reg " -A1 myCPU.fir | sed ":a;N;s/:\n//g;ba" | sed ":a;N;s/--\n//g;ba" | grep -v "reset =>"
     ```
-    其中`xxx.fir`的文件名与顶层模块名相关，通常位于`./build`目录下。若上述命令无输出，说明所有寄存器已经带上复位端。如果上述存在输出，需要按照行号到`xxx.fir`中指定行查看，由于reg的`reset =>`可能会换行，这个换行也会导致命令行输出。所以还需再检查下一行的内容中是否存在`reset =>`。
-    > 注意: chisel只根据firrtl的reset可能无法很准确地判断寄存器的初始化情况，因为reset有时候只会初始化寄存器的部分位，如果初始化的寄存器中是一个bundle，则问题更明显。所以建议使用chisel实现代码的同学，还是需要**自己手动检查下是否所有的寄存器都正确地复位了**。只通过上面`grep reset`的方法可能无法检查出所有问题。
+    The file name of `xxx.fir` is related to the top-level module name and is usually located in the `./build` directory. If there is no output from the above command, it means that all registers have been reset. If there is output above, you need to go to the specified line in `xxx.fir` according to the line number to view. Since the `reset =>` of reg may cause a line break, this line break will also cause command line output. So you need to check whether there is `reset =>` in the content of the next line.
+    > Note: chisel may not be able to accurately determine the initialization of the register based only on the reset of firrtl, because reset sometimes only initializes some bits of the register. If the initialized register is a bundle, the problem is more obvious. Therefore, it is recommended that students who use chisel to implement code still need to manually check whether all registers are reset correctly. It may not be possible to check all problems only through the `grep reset` method above.
 
-* 对于Cache来说，需要：
-    * 确认ICache和DCache的data array的大小均不大于4KB，总和不大于8KB。
-    * 确认ICache和DCache的data array均采用单口RAM。
-    * 对data array进行端口替换：我们提供了与流片用RAM端口一致的简化行为模型，采用的是[带写掩码的单口RAM模型](./ram/S011HD1P_X32Y2D128_BW.v)。`ysyxSoCFull.v`已经在顶层集成了8个**带写掩码**的RAM，每个RAM的规格是128X64bits，共8KB。**同学们需要将Cache替换成访问核顶层的SRAM端口**。
+* For Cache, you need:
+    * Confirm that the size of the data array of ICache and DCache is not greater than 4KB, and the sum is not greater than 8KB.
+    * Confirm that the data array of ICache and DCache both use single-port RAM.
+    * Port replacement of the data array: We provide a simplified behavioral model consistent with the RAM port used for tape-out, using the [single-port RAM model with write mask](./ram/S011HD1P_X32Y2D128_BW.v). `ysyxSoCFull.v` has integrated 8 RAMs with write mask on the top level. The specification of each RAM is 128X64bits, totaling 8KB. **Students need to replace the Cache with the SRAM port that accesses the top layer of the core**.
     >注意：实现大于8KB Cache的核要对Cache大小进行删减，小于8KB的核仍要保留核顶层中不用的端口。实现小于8KB的核将核顶层不用的SRAM端口使能接口置无效，输入悬空，输出地址、数据信号置`0`。**RAM的写掩码为低有效**，如果同学们在接入我们提供的**带写掩码**的RAM时不需要使用该RAM的写掩码，则需将该RAM的写掩码置`1`(置无效)。另外tag array无需替换，**而且不允许在核内自行例化RAM进行其他设计**，同时需要同学们自行维护程序加载时的Cache一致性。具体RAM的端口定义请见[这里](./ram/README.md)。
-* 若采用Verilog/SystemVerilog开发，则需要：
-    * 确认代码中的锁存器(Latch)已经去除。
-        * **Chisel福利：Chisel不会生成锁存器**
-    * 确认代码中的异步复位触发器已经去除，或已经实现同步撤离。
-        * **Chisel福利：Chisel默认生成同步复位触发器**
-* 对于除了SRAM口之外，其他不使用的核顶层端口(io_interrupt和AXI4 slave)，需要将输出端口置`0`，输入端口悬空。
->注意：虽然开源的Verilator的仿真效率要远高于商业的仿真器(比如VCS)。但是Verilator对SystemVerilog的支持还不是很完整，对RTL代码的检查也偏乐观。为此我们在正式开始后端设计前还会使用VCS对同学们提交的核再次进行仿真。为了避免出现由于**Verilator与VCS的仿真行为不一致**而导致的仿真问题，<sup>[[2]](#id_verilator_sim)</sup>**请`避免`在同学们自己的核中使用如下内容：**
-* 不可综合的语法，例如延时和DPI-C。
-* initial语句。
-* unpacked数组、结构体。
-* interface、package、class。
-* 小端序位标号，如 [0:31]。
-* 由于缺失else导致生成锁存器
-* logic类型的X状态和高阻抗Z状态。
-* 使用时钟下降沿触发。
-* 异步reset和跨时钟域。
-* 尝试屏蔽全局时钟信号。
+    > Note: Cores that implement a Cache larger than 8KB must reduce the Cache size, and cores that implement a Cache smaller than 8KB must still retain unused ports in the top layer of the core. To implement a core smaller than 8KB, disable the unused SRAM port enable interface on the top layer of the core, leave the input floating, and set the output address and data signals to `0`. **The write mask of RAM is low effective**. If students do not need to use the write mask of the RAM when accessing the RAM with **write mask** provided by us, they need to set the write mask of the RAM to `1` (disable it). In addition, the tag array does not need to be replaced, and it is not allowed to instantiate RAM in the core for other designs. At the same time, students need to maintain the cache consistency when loading the program. For specific RAM port definitions, please see [here](./ram/README.md).
+* If you use Verilog/SystemVerilog to develop, you need:
+    * Confirm that the latch in the code has been removed.
+        * **Chisel welfare：Chisel does not generate latches**
+    * Confirm that the asynchronous reset trigger in the code has been removed, or synchronous evacuation has been implemented.
+        * **Chisel welfare：Chisel generates synchronous reset triggers by default**
+* For unused core top-level ports (io_interrupt and AXI4 slave) except the SRAM port, the output port needs to be set to `0` and the input port is left floating.
+> Note: Although the simulation efficiency of open source Verilator is much higher than that of commercial simulators (such as VCS). However, Verilator's support for SystemVerilog is not yet complete, and its inspection of RTL code is also optimistic. For this reason, we will use VCS to simulate the cores submitted by the students again before officially starting the back-end design. In order to avoid simulation problems caused by inconsistent simulation behavior between **Verilator and VCS**, <sup>[[2]](#id_verilator_sim)</sup>**please `avoid` using the following content in your own core: **
+* Non-synthesizable syntax, such as delay and DPI-C.
+* initial statement.
+* unpacked array, structure.
+* interface, package, class.
+* Little endian sequence number, such as [0:31].
+* Latch generation due to missing else
+* Logic type X state and high impedance Z state.
+* Use clock falling edge trigger.
+* Asynchronous reset and cross-clock domain.
+* Try to block the global clock signal.
 
 > 注意，再强调一下：
-> 1. 所有的寄存器**都必须要复位**，不然同学们的核可能通过了Verilator测试，但是过不了VCS测试。比如在VCS仿真阶段，同学们核的Cache可能仿真会出现问题。一个可能的原因是Cache在进行写回操作时寄存器忘记复位导致出现未知态而无法被选择。
+> Note, let we emphasize again:
+> 1. All registers **must be reset**, otherwise the students' core may pass the Verilator test, but not the VCS test. For example, during the VCS simulation stage, the Cache that students core may have problems in the simulation. One possible reason is that the Cache register forgot to reset when performing a write-back operation, resulting in an unknown state that cannot be selected.
 > 2. AXI4总线**不要只用ready作为切换状态的信号**，**因为在VCS上进行仿真的SoC默认ready是一直拉高的**，可能会导致同学们的核在VCS仿真下出现AXI4握手和状态机切换问题。
+> 2. For AXI4 bus, **don’t just use ready as the signal to switch the state**, **because the default ready of SoC simulated on VCS is always pulled high**, which may cause AXI4 handshake and state machine switching problems in students' cores under VCS simulation.
 
-## 代码规范检查(北京时间 2022/10/07 23:59:59前完成)
-对代码进行规范检查，并清除报告中的Warning。具体步骤如下：
-* 运行`./main.py -l`，Verilator将会报告除`DECLFILENAME`和`UNUSED`之外所有类别的Warning，你需要修改代码来清理它们。Warning的含义可以参考[Verilator手册的说明](https://veripool.org/guide/latest/warnings.html#list-of-warnings)。
-* 运行`./main.py -lu`，Verilator将会额外报告`UNUSED`类别的Warning，你需要修改代码来尽最大可能清理它们。
-* 若某些`UNUSED`类别的Warning无法清理，或者**存在一些同学们无法自行决定是否可以清除**的Warning时，需要填写`./lint`目录中的[warning.md](./lint/warning.md)并给出原因，用于向SoC团队和后端设计团队提供参考。其中[warning.md](./lint/warning.md)中已经给出了格式范例，同学们填写时可以自行删除。
->注意：<sup>[[1]](#id_verilator_unopt)</sup>Verilator对于**组合逻辑环**通常会报`UNOPT`或者`UNOPTFLAT`警告，这是因为组合逻辑环需要多次迭代后才能得到最终的结果(收敛)。这两种警告的区别在于，一个是Verilator生成`flatten netlist`前报告的，一个是生成后报告的。虽然Verilator声称忽略这些警告不会影响仿真的正确性，但是也有一种可能是同学们的核内确实存在有组合逻辑环。如果有，很可能是核内有地方写错了。根据我们的经验，大家在写流水线的hazard部分时比较容易写出组合逻辑环。
+## Code Specification Check (Completed before 2022/10/07 23:59:59, Beijing time)
+Perform specification checks on the code and clear warnings in reports. Specific steps are as follows:
+* Run `./main.py -l`, Verilator will report all categories of Warning except `DECLFILENAME` and `UNUSED`, you need to modify the code to clean them up. For the meaning of Warning, please refer to [Verilator Manual Instructions](https://veripool.org/guide/latest/warnings.html#list-of-warnings).
+* When running `./main.py -lu`, Verilator will additionally report Warnings of the `UNUSED` category. You need to modify the code to clean them up as much as possible.
+* If some `UNUSED` category Warnings cannot be cleared, or **there are some Warnings that students cannot decide whether to clear**, you need to fill in the [warning.md](./lint/warning.md) and give the reasons to provide reference to the SoC team and back-end design team. Among them, [warning.md](./lint/warning.md) has given format examples, and students can delete them by themselves when filling in the form.
+> Note: <sup>[[1]](#id_verilator_unopt)</sup>Verilator usually reports a `UNOPT` or `UNOPTFLAT` warning for **combinational logic loop**. This is because the combinational logic loop requires multiple iterations to obtain the final result (convergence). The difference between these two warnings is that one is reported before Verilator generates `flatten netlist`, and the other is reported after it is generated. Although Verilator claims that ignoring these warnings will not affect the correctness of the simulation, there is also a possibility that there are indeed combinatorial logic loops in the students' cores. If so, it is likely that there is a bug somewhere in the core. According to our experience, it is easier for everyone to write combinational logic loops when writing the hazard part of the pipeline.
 
-> 对于Verilator报告的`UNOPT`警告，**某些情况下不一定是真的存在组合逻辑环**。这是因为，出于仿真性能上的考虑，Verilator并不是按信号的每一位来单独计算的，通常会把很多信号放一起计算。**此时如果确定处理器核内确实不存在组合逻辑环的话，可以使用`/* verilator split_var */`来消除警告，并继续进行下面的测试过程。** 组合逻辑环与UNPOT的具体例子可以参见<sup>[[1]](#id_verilator_unopt)</sup>。
+> Regarding the `UNOPT` warning reported by Verilator, **in some cases it is not necessarily true that a combinational logic cycle exists**. This is because, for the sake of simulation performance, Verilator does not calculate each bit of the signal separately, but usually calculates many signals together. **At this time, if it is determined that there is indeed no combinational logic loop in the processor core, you can use `/* verilator split_var */` to eliminate the warning and continue with the following test process.** For specific examples of combinational logic rings and UNPOT, see <sup>[[1]](#id_verilator_unopt)</sup>.
 
-## Verilator仿真(北京时间 2022/10/07 23:59:59前完成)
-> <sup>[[3]](#id_verilator_cycle)</sup>Verilator是一个支持Verilog/SystemVerilog的周期精确(cycle-accurate)的开源仿真器，但是它不能代替Vivado xsim这些事件驱动的仿真器。<sup>[[4]](#id_verilator_intro)</sup>所谓周期精确仿真，是在确定模块输入的情况下，计算出模块在足够长时间后的输出。因此在周期精确仿真中没有延时的概念。可以理解为每次更新都是计算模块在无穷久后处于稳态时的输出。对于CPU这种由一个时钟信号驱动的设计，外层代码(C++代码)只需要通过反复变动时钟信号的值(从0变1，再从1变0)，就能得到每个周期内CPU的状态输出。
+## Verilator Simulation (completed before 2022/10/07 23:59:59, Beijing time)
+> <sup>[[3]](#id_verilator_cycle)</sup>Verilator is a cycle-accurate open source simulator that supports Verilog/SystemVerilog, but it cannot replace event-driven simulators such as Vivado xsim. <sup>[[4]](#id_verilator_intro)</sup>The so-called cycle-accurate simulation is to calculate the output of the module after a sufficient period of time after determining the module input. Therefore there is no concept of delay in cycle accurate simulation. It can be understood that each update is the output of the calculation module when it is in a steady state after infinite time. For a design like the CPU driven by a clock signal, the outer code (C++ code) only needs to repeatedly change the value of the clock signal (from 0 to 1, and then from 1 to 0) to obtain the CPU's value in each cycle status output.
 
-><sup>[[4]](#id_verilator_intro)</sup>由于Verilator是一个基于周期的仿真器，这意味着它不会评估单个周期内的时间，也不会模拟精确的电路时序。因此无法从波形中观察到一个时钟周期内的毛刺，也不支持定时信号延迟。另外由于Verilator是基于周期驱动的仿真器，它不能用于时序仿真、反向注释网表、异步(无时钟)逻辑，或者一般来说任何涉及时间概念的信号变化，也即每当Verilator评估电路时，所有输出都会立即切换。正是由于时钟边沿之间的一切都被忽略了，Verilator的仿真速度才能做到非常快，故Verilator非常适合仿真具有一个或多个时钟的同步数字逻辑电路的功能，或者用于从Verilog/SystemVerilog代码创建软件模型。
+><sup>[[4]](#id_verilator_intro)</sup>Since Verilator is a cycle-based simulator, this means that it does not evaluate time within a single cycle, nor does it simulate precise circuit timing. Therefore, glitches within one clock cycle cannot be observed in the waveform, and timing signal delays are not supported. In addition, since Verilator is a cycle-driven simulator, it cannot be used for timing simulation, back-annotated netlists, asynchronous (no clock) logic, or generally any signal changes involving the concept of time, that is, whenever Verilator evaluates the circuit , all outputs switch immediately. It is precisely because everything between clock edges is ignored that Verilator's simulation speed can be very fast, so Verilator is very suitable for simulating the functions of synchronous digital logic circuits with one or more clocks, or for converting from Verilog/SystemVerilog code creates software models.
 
-一生一芯四期的SoC框架会对同学们的处理器核代码使用Verilator进行集成测试与仿真，其中SoC的地址空间分配如下：
-| 设备 | 地址空间 |
+The One Student One Chip 4th SoC framework will use Verilator for integration testing and simulation of students' processor core codes. The address space of the SoC is allocated as follows:
+| Device | Address Space |
 | --- | --- |
 | Reserve           | `0x0000_0000~0x01ff_ffff`|
 | CLINT             | `0x0200_0000~0x0200_ffff`|
@@ -167,43 +169,42 @@ In order to use `main.py` to test, you need:
 | MEM               | `0x8000_0000~0xfbff_ffff`|
 | SDRAM             | `0xfc00_0000~0xffff_ffff`|
 
-其中:
-* 处理器的复位PC需设置为`0x3000_0000`，第一条指令从flash中取出。
-* CLINT模块位于处理器核内部，SoC不提供，需要同学们自行实现。
-* 接入外部中断需要同学们**自行设计仲裁逻辑**(核的top层已经预留有io_interrupt接口， 该口会从SoC引出并通过ChipLink接入到FPGA中。同学们需要自行在FPGA上实现PLIC。核在接收到中断会jump到异常处理程序，之后通过读ChipLink MMIO的相关寄存器来查看中断源信息并响应。异常处理完后可以通过写ChipLink MMIO的相关寄存器来清除中断源，**外部中断功能是可选实现的，但不实现的话仍需保留io_interrupt接口**)。
-* MMIO地址的VGA和Frame Buffer范围都会访问vga ctrl。0x1000_2000~0x1000_2fff是访问vga的axi4从口来进行功能配置。vga的帧缓冲实际上保存在内存中，但我们希望对帧缓冲的写入通过MMIO总线进行，所以在vga模块中加入了一个映射模块，处理器将对某个像素的写入发送到MMIO Frame Buffer的地址上，vga对这个地址加上偏移量，从而获取到像素位于内存的地址，并通过自身的axi4主机口将读写请求转发给内存。
-* 接入同学们自行设计的设备需要核内实现并将设备寄存器分配到**Reserve地址范围内**。
-> 注意：四期SoC的地址空间中没有设置与SoC时钟和管脚相关的功能寄存器，**即不支持通过软件访问某个确定地址来设置SoC相关参数**。
+* The reset PC of the processor needs to be set to `0x3000_0000`, and the first instruction is taken out from the flash.
+* The CLINT module is located inside the processor core and is not provided by SoC. Students need to implement it by themselves.
+* To access external interrupts, students need to **design their own arbitration logic** (the top layer of the core has reserved the io_interrupt interface, which will be led from the SoC and connected to the FPGA through ChipLink. Students need to design their own arbitration logic to implement PLIC on the FPGA. When the core receives an interrupt, it will jump to the exception handler, and then read the relevant registers of ChipLink MMIO to view the interrupt source information and respond. After the exception is handled, the interrupt source can be cleared by writing to the relevant registers of ChipLink MMIO. **The external interrupt function is optional, but if it is not implemented, the io_interrupt interface must still be retained**).
+* VGA and Frame Buffer ranges of MMIO addresses will access vga ctrl. 0x1000_2000~0x1000_2fff is to access the axi4 slave port of vga for function configuration. The frame buffer of vga is actually stored in memory, but we want to write to the frame buffer through the MMIO bus, so a mapping module is added to the vga module, and the processor sends the write of a certain pixel to the MMIO Frame On the address of the Buffer, vga adds an offset to this address to obtain the address of the pixel in the memory, and forwards the read and write requests to the memory through its own axi4 host port.
+* Access to the devices designed by students needs to be implemented in the core and the device registers are allocated to the **Reserve address range**.
+> Note: There are no functional registers related to the SoC clock and pins in the address space of the 4th session SoC, which means that it is not supported to set SoC related parameters by accessing a certain address through software.
 
-### Verilator仿真要求如下：
-* 使用Verilator将自己的核`ysyx_8位学号.v`和`ysyxSoCFull.v`正确编译成可执行仿真程序`emu`。
-* 确认清除Warning后的代码可以成功启动hello、memtest和rtthread等程序。**四期SoC添加了新的测试程序，测试程序的具体内容和要求请见[这里](./prog/README.md)**。
-* 通过快速模式(跳过SPI传输，不可综合，适合快速调试和迭代)对flash进行模拟，运行并通过本框架提供的测试程序。为了打开flash的快速模式，你需要在`./perip/spi/rtl/spi.v`的开头定义宏`FAST_FLASH`：
+### Verilator Simulation Requirements Are as Follows:
+* Use Verilator to correctly compile your own core `ysyx_[8-bit student number].v` and `ysyxSoCFull.v` into the executable simulation program `emu`.
+* Confirm that the code after clearing the Warning can successfully start programs such as hello, memtest, and rtthread. **A new test program has been added to the 4th session of SoC. For the specific content and requirements of the test program, please see [here](./prog/README.md)**.
+* Simulate the flash through fast mode (skip SPI transmission, cannot be synthesized, suitable for quick debugging and iteration), run and pass the test program provided by this framework. In order to turn on the fast mode of flash, you need to define the macro `FAST_FLASH` at the beginning of `./perip/spi/rtl/spi.v`:
   ```Verilog
   // define this macro to enable fast behavior simulation
   // for flash by skipping SPI transfers
   `define FAST_FLASH
   ```
-  > 注意：**事实上同学们不需要真正去添加`FAST_FLASH`宏，因为我们已经添加好了，并且我们已经在`main.py`中维护了自动切换`FAST_FLASH`宏的功能**，这一节只是在给同学们介绍Verilator仿真的过程。并不需要同学们上手修改代码，而下一节[Verilator仿真具体步骤](#verilator仿真具体步骤如下)才是同学们需要实际操作的部分。
+  > Note: **In fact, students do not need to actually add the `FAST_FLASH` macro, because we have already added it, and we have maintained the function of automatically switching the `FAST_FLASH` macro in `main.py`**. This section just introduces the process of Verilator simulation to students. Students are not required to modify the code, but the next section [The Specific Steps of Verilator Simulation](#the-specific-steps-of-verilator-simulation-are-as-follows) is the part that students need to actually operate.
 
-  具体来说，该模式下spi控制器会直接使用DPI-C函数将需要的程序和数据读到AXI4总线侧，而避免原先`AXI4<--->SPI<--->DPI-C`中的AXI4到SPI协议的转换过程，提高了程序仿真的速度。对于每个同学来说，都需要通过：
-  * 直接在flash上运行的程序(位于`./prog/bin/flash`目录下)：
+  Specifically, in this mode, the spi controller will directly use the DPI-C function to read the required programs and data to the AXI4 bus side, avoiding the original `AXI4<--->SPI<--->DPI-C` conversion process of AXI4 to SPI protocol improves the speed of program simulation. Every student needs to pass:
+  * Programs that run directly on flash (located in the `./prog/bin/flash` directory):
     * hello-flash.bin
     * memtest-flash.bin
     * rtthread-flash.bin
     * ...
-  * 通过loader把程序加载到memory，然后跳转运行(位于`./prog/bin/mem`目录下)。**注意需要额外实现`fence.i`指令**
+  * Load the program into memory through loader, and then jump to run (located in the `./prog/bin/mem` directory). **Note that additional implementation of the `fence.i` instruction is required**
     * hello-mem.bin
     * memtest-mem.bin
     * rtthread-mem.bin
     * ...
-* 通过正常模式(不跳过SPI传输，仿真速度慢，用于最终的系统测试)对flash进行模拟，重新运行上述测试程序。你需要在`./perip/spi/rtl/spi.v`的开头取消对宏`FAST_FLASH`的定义：
+* Simulate the flash through normal mode (no skipping SPI transmission, slow simulation speed, used for final system testing), and rerun the above test program. You need to undefine the macro `FAST_FLASH` at the beginning of `./perip/spi/rtl/spi.v`:
   ```Verilog
   // define this macro to enable fast behavior simulation
   // for flash by skipping SPI transfers
   // `define FAST_FLASH
   ```
-    * 然后再分别重新运行上面提到的flash、mem：
+    * Then rerun the flash and mem mentioned above respectively:
         * hello-flash.bin
         * memtest-flash.bin
         * rtthread-flash.bin
@@ -212,137 +213,131 @@ In order to use `main.py` to test, you need:
         * rtthread-mem.bin
         * ...
 
-### Verilator仿真具体步骤如下：
-前面的小节[Verilator仿真要求](#verilator仿真要求如下)介绍了整个测试程序的结构，但是为了方便同学们进行Verilator测试，我们**已经在`main.py`中实现了Verilator编译、仿真测试和回归测试功能**，并且可以使得Verilator仿真程序`emu`自动在快速模式和正常模式间进行切换，不需要同学们手动修改`define FAST_FLASH`。同学们只需要：
-
-* 运行`./main.py -c`就可以编译生成flash正常模式下的仿真可执行文件`emu`，运行`./main.py -fc`可以编译生成flash快速模式下的仿真可执行文件`emu`。为了提高编译速度，可以修改`./sim/Makefile`中`build`的`-j6`选项。
-* 在生成`emu`之后，使用：
+### The Specific Steps of Verilator Simulation Are as Follows:
+The previous section [Verilator Simulation Requirements](#verilator-simulation-requirements-are-as-follows) introduces the structure of the entire test program, but in order to facilitate students to conduct Verilator testing, we **have implemented Verilator compilation, simulation testing and regression testing functions in `main.py`**, and can make the Verilator simulation program `emu` automatically switch between fast mode and normal mode, without students needing to manually modify `define FAST_FLASH`. Students only need to:
+* Run `./main.py -c` to compile and generate the emulation executable file `emu` in flash normal mode. Run `./main.py -fc` to compile and generate the simulation executable file `emu` in flash fast mode. In order to improve the compilation speed, you can modify the `-j6` option of `build` in `./sim/Makefile`.
+* After generating `emu`, use:
     ```sh
     $> ./main.py -t APP_TYPE APP_NAME SOC_SIM_MODE SOC_WAV_MODE
     ```
-    来对某个特定测试程序进行仿真，其中`APP_TYPE`可选值为`flash`和`mem`，分别表示flash和memory加载两种启动方式。`APP_NAME`的可选值有`hello`、`memtest`和`rtthread`等。所有的支持的程序名见`./main.py -h`中的`-t`选项的列表。`SOC_SIM_MODE`的可选值有`cmd`和`gui`，分别表示仿真的执行环境，`cmd`表示命令行执行环境，程序会在命令行输出仿真结果。`gui`表示图形执行环境，程序会使用SDL2将RTL的数据进行图形化交互展示。`SOC_WAV_MODE`的可选值有`no-wave`和`wave`。比如运行`./main.py -t flash hello cmd no-wave`可以仿真flash模式下的命令行执行环境的hello测试程序，并且不输出波形。运行`./main.py -t mem hello cmd wave`可以仿真flash模式下的命令行执行环境的hello测试程序，并且输出波形，波形文件的路径为`./ysyx/soc.wave`。波形的默认格式是`FST`，FST是GTKWave自己开发的一种二进制波形格式，相比VCD文件体积更小。运行`./main.py -t mem kdb gui`可以仿真mem加载模式下图形执行环境的键盘测试程序。
-    > 注意：**所有的测试程序只能在一种执行环境下运行，具体在哪个环境下运行见[文档](./prog/README.md)**。如果需要输出VCD格式的波形文件，只需要在[./sim/Makefile](./sim/Makefile)的开头把`WAVE_FORMAT ?= FST`修改成`WAVE_FORMAT ?= VCD`，然后重新编译即可。**需要强调的一点是使用`wave`选项开启波形输出后，程序运行时间会变长，如果程序没有跑出结果就结束的话，请自行修改下面小节介绍的"预设运行时间"。**
-
-* 运行`./main.py -r`和`./main.py -fr`就可以依次运行flash正常模式与快速模式的回归测试，回归测试只测试在`cmd`执行环境下的程序，`gui`执行环境下的程序不进行回归测试。
-* 在测试过程中我们对于每个测试都设置了**预设运行时间**，当程序超过**预设运行时间**后会自行停止运行，同学们可以修改`./main.py`中的：
+    To simulate a specific test program, the optional values ​​of `APP_TYPE` are `flash` and `mem`, which represent the two startup methods of flash and memory loading respectively. Optional values for `APP_NAME` include `hello`, `memtest`, `rtthread`, etc. See the list of `-t` options in `./main.py -h` for all supported program names. The optional values ​​of `SOC_SIM_MODE` are `cmd` and `gui`, which respectively represent the simulation execution environment. `cmd` represents the command line execution environment. The program will output the simulation results on the command line. `gui` represents the graphical execution environment, and the program will use SDL2 to graphically interactively display RTL data. Optional values for `SOC_WAV_MODE` are `no-wave` and `wave`. For example, running `./main.py -t flash hello cmd no-wave` can simulate the hello test program of the command line execution environment in flash mode without outputting the waveform. Run `./main.py -t mem hello cmd wave` to simulate the hello test program of the command line execution environment in flash mode and output the waveform. The path of the waveform file is `./ysyx/soc.wave`. The default format of the waveform is `FST`. FST is a binary waveform format developed by GTKWave itself. It is smaller in size than VCD files. Run `./main.py -t mem kdb gui` to simulate the keyboard test program of the graphical execution environment in mem loading mode.
+    > Note: **All test programs can only be run in one execution environment. For details on which environment to run, see [Document](./prog/README.md)**. If you need to output a wave file in VCD format, you only need to change `WAVE_FORMAT ?= FST` to `WAVE_FORMAT ?= VCD` at the beginning of [./sim/Makefile](./sim/Makefile), and then recompile. **One thing that needs to be emphasized is that after using the `wave` option to enable waveform output, the program running time will become longer. If the program ends without running out the results, please modify the "preset running time" introduced in the following section.**
+* Run `./main.py -r` and `./main.py -fr` to run the regression test of flash normal mode and fast mode in sequence. The regression test only tests the program in the `cmd` execution environment, programs in the `gui` execution environment are not subject to regression testing.
+* During the testing process, we set a **preset running time** for each test. When the program exceeds the **preset running time**, it will stop running on its own. Students can modify `./main.py`:
     ```python
     app = [('hello', 40), ('memtest', 70), ('rtthread', 450)...]
     ```
-    数字部分以适应自己核的运行，其中数字表示**预设运行时间**，单位为秒。由于mem测试程序需要加载，所需时间会比直接在flash中运行的要长一些，故这里的预设运行时间是以仿真程序在mem下的运行时间为基准设置的，如想提前终止程序运行，可以直接输入`ctrl-c`。想要仿真不停止可以通过设置一个较大的数字来实现，数字至少是int32类型的。另外为了保证测试时代码总是最新的，**回归测试时会对代码进行重新编译，编译之后再测试**。
-> 建议：当调试通过单个测试程序后，可以直接运行回归测试指令 `./main.py -r`和`./main.py -fr`来测试所有的命令行执行环境下的程序。
+    The number part is to adapt to the operation of your own core, where the number represents the **preset running time** in seconds. Since the mem test program needs to be loaded, the time required will be longer than running it directly in flash. Therefore, the preset running time here is set based on the running time of the simulation program under mem. If you want to terminate the program in advance , you can enter `ctrl-c` directly. If you want the simulation to not stop, you can set a larger number. The number should be at least of type int32. In addition, in order to ensure that the code is always up to date during testing, the code will be recompiled during regression testing, and then tested again after compilation.
+> Recommendation: After debugging a single test program, you can directly run the regression test instructions `./main.py -r` and `./main.py -fr` to test all programs in the command line execution environment.
 
-> 注意：若为了正确运行测试程序而对处理器核进行了修改，**需要重新按照上述流程从头开始依次测试**。
+> Note: If the processor core is modified in order to run the test program correctly, **you need to follow the above process again and start testing from scratch**.
 
-## 提交代码(北京时间 2022/10/07 23:59:59前完成)
->注意：此处提交是为了尽快运行综合流程并发现新问题，此后可以继续调试处理器核的实现。
+## Submit Code (Completed before 2022/10/07 23:59:59, Beijing time)
+> Note: The purpose of submitting here is to run the synthesis process as soon as possible and discover new problems. After that, you can continue to debug the implementation of the processor core.
 
-在接入ysyxSoC本框架并完成上述所有测试后，可以开始代码提交流程。提交前请确保所有触发器可复位。具体需要准备的工作如下：
-* 将成功运行本框架的flash正常模式`rtthread-mem.bin`的截图文件`rtthread-mem.png`放置于`./submit`目录下。
-* 填写`./submit`目录下的cache规格文档[cache_spec.md](./submit/cache_spec.md)。
-* 确认已经根据代码规范检查并在`./lint`目录下填写完[warning.md](./lint/warning.md)。
-* 制作一份带数据流向的处理器架构图，并对图中各模块做简单说明，整理成`ysyx_8位学号.pdf`文件并放置于`./submit`目录下。
-* 创建自己的gitee开源仓库，确认仓库的默认主分支是`master`。
-* 确认仓库通过ssh的方式clone到`./submit`目录下并填写完成git的`user.email`和`user.name`。然后运行`./main.py -su`，该脚本会先检查上述提交文件是否齐全，齐全的话会将文件拷贝到本地clone的仓库中，并推送到远端gitee仓库。
-  > 注意：除了clone的`./submit`的gitee仓库外，不要在`./submit`中添加额外的文件夹，因为提交脚本是通过`os.path.isdir()`来自动确定本地clone的仓库名字的，如果`./submit`中存在多个文件夹，则程序无法分辨哪个是本地clone的仓库了。
-* 将自己仓库的`HTTPS格式的URL`和`ysyx_8位学号`发送给组内助教以完成第一次代码提交。后续提交只需要重新运行`./main.py -su`命令即可。
+After accessing the ysyxSoC framework and completing all the above tests, you can start the code submission process. Please make sure all triggers are reset before submitting. The specific preparation work required is as follows:
+* Place the screenshot file `rtthread-mem.png` of the flash normal mode `rtthread-mem.bin` that successfully runs this framework in the `./submit` directory.
+* Fill in the cache specification document [cache_spec.md](./submit/cache_spec.md) in the `./submit` directory.
+* Confirm that [warning.md](./lint/warning.md) has been filled in according to the code specifications and completed in the `./lint` directory.
+* Make a processor architecture diagram with data flow direction, briefly explain each module in the diagram, organize it into a `ysyx_[8-bit student number].pdf` file and place it in the `./submit` directory.
+* Create your own gitee open source repository and confirm that the default main branch of the repository is `master`.
+* Confirm that the repository is cloned to the `./submit` directory through ssh and fill in the `user.email` and `user.name` of git. Then run `./main.py -su`. The script will first check whether the above submitted files are complete. If they are complete, the files will be copied to the local clone repository and pushed to the remote gitee repository.
+  > Note: In addition to the gitee repository of clone's `./submit`, do not add additional folders in `./submit`, because the submission script automatically determines the local clone repository name through `os.path.isdir()`, if there are multiple folders in `./submit`, the program cannot distinguish which one is the local cloned repository.
+* Send the `HTTPS format URL` and `ysyx_[8-bit student number]` of your own repository to the teaching assistant in the group to complete the first code submission. Subsequent submissions only require re-running the `./main.py -su` command.
+* After the code is submitted, it will be automatically pulled by the CI/CD program and tested accordingly. The code can also be submitted manually, **but you need to ensure that each submission must use `dc & vcs` as the commit information**. The CI/CD program will only recognize the commit information of `dc & vcs`.
 
-* 代码提交后会被CI/CD程序自动拉取，并进行相应的测试。代码也可以手动提交，**但是需要确保每次提交都要以`dc & vcs`作为commit信息**，CI/CD程序只会识别`dc & vcs`的commit信息。
+> Note: Cache specifications cannot be modified in subsequent submissions, and bugs can only be fixed based on report feedback. The SoC and back-end teams will use the CI/CD program to regularly check the newly submitted code, conduct comprehensive and simulation tests, and upload the results in the form of log reports to the **ysyx4 branch** of the ysyx_submit repository. For specific instructions, please refer to [ysyx_submit repository documentation](https://gitee.com/OSCPU/ysyx_submit/blob/ysyx4).
 
-> 注意：后续提交不可修改Cache规格，只能根据report反馈修复bug。SoC和后端团队将使用CI/CD程序定期检查新提交的代码，进行综合和仿真测试，并将结果以日志报告的形式上传至ysyx_submit仓库的**ysyx4分支**，具体说明请参考[ysyx_submit仓库的说明文档](https://gitee.com/OSCPU/ysyx_submit/blob/ysyx4)。
+## Assist the SoC Team to Start RT-Thread in the Tape-out Simulation Environment (Completed before 2022/11/07 23:59:59, Beijing time)
+After submitting the code, please pay attention to the feedback from the SoC team in time.
 
+> Note: **The SoC in this project is only used for verification in Verilator and does not participate in the tape-out process!** In addition, there are still a few differences between this project and the tape-out SoC simulation environment. Passing the test in this project does not mean that it can also pass the test in the tape-out SoC simulation environment. The running results in the tape-out SoC simulation environment , based on the feedback from the SoC team, so please be sure to pay attention to the feedback from the SoC team.
 
-## 协助SoC团队在流片仿真环境中启动RT-Thread(北京时间 2022/11/07 23:59:59前完成)
-提交代码后，请及时关注SoC团队的反馈。
+Specifically, compared to simulation based on the tape-out SoC simulation environment, simulation based on Verilator:
+* There is no problem of indefinite state (x-state) signal propagation.
+* There is no cross-clock domain and asynchronous bridge.
+* No PLL.
+* No delay information for real devices.
 
-> 注意：**本项目中的SoC只用于在Verilator中验证，不参与流片环节！** 此外本项目与流片SoC仿真环境仍然有少数不同，在本项目中通过测试并**不代表也能通过流片SoC仿真环境的测试**，在流片SoC仿真环境中的运行结果，以SoC团队的反馈为准，因此请大家务必重视SoC团队的反馈。
+> **When this step is completed, students who pass the simulation tests of Verilator and VCS at the same time, and the dc synthesis also meets the timing and area requirements, can obtain pre tape-out qualifications. After passing the online assessment organized by the project team, you will be officially qualified for tape-out of One Student One Chip 4th.**
 
-具体来说，相较于基于流片SoC仿真环境的仿真，基于Verilator的仿真:
-* 没有不定态(x态)信号传播的问题。
-* 没有跨时钟域和异步桥。
-* 没有PLL。
-* 没有真实器件的延时信息。
+## Extended Content
+> Note: **The following content is not a task that students must complete, but is provided for students who have customized needs for the SoC simulation framework we provide. The following introduces the necessary steps to compile and generate your own test program, generate your own Verilator simulation program, and the process and key points to note when using chisel to generate the ysyxSoCFull framework**.
 
+## Generate Your Own Test Program
 
-> **当完成到这一步，即同时通过Verilator和VCS的仿真测试，且dc综合也满足时序和面积要求的同学，即可获得预流片资格。后续当通过项目组组织的在线考核后将正式获得一生一芯第四期的流片资格。**
-
-## 扩展内容
-> 注意：**以下内容不是同学们必须要完成的任务，而是给那些对我们提供的SoC仿真框架有定制化需求的同学们提供的。下面分别介绍了编译和生成自己的测试程序、生成自己的Verilator仿真程序所需要的必要步骤和使用chisel生成ysyxSoCFull框架的过程和注意要点**。
-
-## 生成自己的测试程序
-
-从第四期第二批开始，项目组**不再提供适配ysyxSoC环境的`abstract-machine`**，程序的运行时环境(am)需要同学们自己实现，但是框架提供了实现参考，具体如下：
-* 正确设置`AM_HOME`环境变量。
-* 将自己的测试程序源码目录放到`./prog/src`下，源码目录下需要有个Makefile，其内容格式可以参考`./prog/src/hello/Makefile`：
+Starting from the second batch of the 4th session, the project team **no longer provides `abstract-machine` adapted to the ysyxSoC environment** . The runtime environment (am) of the program needs to be implemented by students themselves, but the framework provides an implementation reference. details as follows:
+* Correctly set the `AM_HOME` environment variable.
+* Place your own test program source code directory under `./prog/src`. There needs to be a Makefile in the source code directory. For its content format, please refer to `./prog/src/hello/Makefile`:
     ```Makefile
-    SRCS = hello.c # 所有的源码路径
-    NAME = hello   # 生成的可执行程序名
+    SRCS = hello.c # All source code paths
+    NAME = hello   # Generated executable program name
 
     include $(AM_HOME)/Makefile
     ```
-* 然后切换到`./prog/src`，修改`run.py`中的`APP_NAME`和`APP_TYPE`的值。其中`APP_NAME`修改为上一个步骤中Makefile中填写的`NAME`，`APP_TYPE`修改为`flash`或者`mem`，表示生成的程序的加载类型，`flash`表示程序从flash直接执行，`mem`表示程序先从flash加载到mem中，然后再执行。
-* 执行`./prog/src/run.py`，编译通过的话就可以在`./prog/bin/$(FLASH_TYPE)`下得到可执行程序。
+* Then switch to `./prog/src` and modify the values ​​of `APP_NAME` and `APP_TYPE` in `run.py`. Among them, `APP_NAME` is changed to the `NAME` filled in the Makefile in the previous step, `APP_TYPE` is changed to `flash` or `mem`, indicating the loading type of the generated program, `flash` means that the program is executed directly from flash, ` mem` means that the program is first loaded from flash into mem and then executed.
+* Execute `./prog/src/run.py`. If the compilation passes, you can get the executable program under `./prog/bin/$(FLASH_TYPE)`.
 
-## ysyxSoCFull定制集成步骤
-* 将`ysyxSoC/ysyx/perip`目录及其子目录下的所有`.v`文件加入verilator的Verilog/SystemVerilog文件列表。
-* 将`ysyxSoC/ysyx/soc/ysyxSoCFull.v`文件加入verilator的Verilog/SystemVerilog文件列表。
-* 将处理器Verilog/SystemVerilog文件加入verilator的Verilog/SystemVerilog文件列表。
-* 将`ysyxSoC/ysyx/perip/uart16550/rtl`和`ysyxSoC/ysyx/perip/spi/rtl`两个目录加入包含路径中(使用verilator的`-I`选项)。
-* 将`ysyxSoC/ysyx/perip/spiFlash/spiFlash.cpp`文件加入verilator的C++文件列表。
-* 将处理器的复位PC设置为`0x3000_0000`。
-* 在verilator编译选项中添加`--timescale "1ns/1ns"`。
-* 在verilator初始化时对flash进行初始化，有以下两种方式:
-   * 调用`spiFlash.cpp`中的`flash_init(img)`函数，用于将bin文件中的指令序列放置在flash中，其中参数`img`是bin文件的路径，在`ysyxSoC/ysyx/prog/bin/flash`和`ysyxSoC/ysyx/prog/bin/mem`目录下提供了一些示例。
-   * 调用`spiFlash.cpp`中的`flash_memcpy(src, len)`函数，用于将已经读入内存的指令序列放置在flash中，其中参数`src`是指令序列的地址，`len`是指令序列的长度。
-* 将`ysyxSoCFull`模块(在`ysyxSoC/ysyx/soc/ysyxSoCFull.v`中定义)设置为verilator仿真的顶层。
-* 将`ysyxSoC/ysyx/soc/ysyxSoCFull.v`中的`ysyx_000000`模块名修改为自己的处理器模块名。
-* 通过Verilator进行仿真即可。
+## ysyxSoCFull Custom Integration Steps
+* Add all `.v` files in the `ysyxSoC/ysyx/perip` directory and its subdirectories to verilator's Verilog/SystemVerilog file list.
+* Add the `ysyxSoC/ysyx/soc/ysyxSoCFull.v` file to verilator's Verilog/SystemVerilog file list.
+* Add processor Verilog/SystemVerilog files to verilator's Verilog/SystemVerilog file list.
+* Add the two directories `ysyxSoC/ysyx/perip/uart16550/rtl` and `ysyxSoC/ysyx/perip/spi/rtl` to the include path (use the `-I` option of verilator).
+* Add the `ysyxSoC/ysyx/perip/spiFlash/spiFlash.cpp` file to verilator's C++ file list.
+* Set the processor's reset PC to `0x3000_0000`.
+* Add `--timescale "1ns/1ns"` to verilator compilation options.
+* There are two ways to initialize flash when verilator is initialized:
+    * Call the `flash_init(img)` function in `spiFlash.cpp` to place the instruction sequence in the bin file in flash, where the parameter `img` is the path to the bin file. Some examples are provided in the `ysyxSoC/ysyx/prog/bin/flash` and `ysyxSoC/ysyx/prog/bin/mem` directories.
+    * Call the `flash_memcpy(src, len)` function in `spiFlash.cpp` to place the instruction sequence that has been read into the memory in flash, where the parameter `src` is the address of the instruction sequence and `len` is the length of the instruction sequence.
+* Set the `ysyxSoCFull` module (defined in `ysyxSoC/ysyx/soc/ysyxSoCFull.v`) as the top level of verilator simulation.
+* Modify the `ysyx_000000` module name in `ysyxSoC/ysyx/soc/ysyxSoCFull.v` to your own processor module name.
+* Just perform simulation through Verilator.
 
-
-## 自己编译并生成ysyxSoCFull.v步骤
-* 更新并拉取当前仓库的子模块：
+## The Steps of Compile and Generate ysyxSoCFull.v by Yourself
+* Update and pull the submodules of the current repository:
     ```sh
     $> git submodule update --init
     ```
-* 指定RISCV环境变量为工具链的安装目录，为`riscv64-unknown-elf-xxx`开发版的根目录：
+* Specify the RISCV environment variable as the installation directory of the toolchain, which is the root directory of the `riscv64-unknown-elf-xxx` development version:
     ```sh
     $> export RISCV=/path/to/riscv/toolchain/installation
     ```
-* 进入到`./ysyx`目录下执行`./main.py -y`编译SoC框架，框架的源码结构如下所示：
+* Enter the `./ysyx` directory and execute `./main.py -y` to compile the SoC framework. The source code structure of the framework is as follows:
     ```sh
     ysyxSoC/src/main/scala/ysyx
     ├── chiplink
-    │   └── ...                        # ChipLink的实现
+    │   └── ...                        # Implementation of ChipLink
     └── ysyx
-        ├── AXI4ToAPB.scala            # AXI4-APB的转接桥，不支持burst，且只支持4字节以下的访问
-        ├── ChipLinkBridge.scala       # ChipLink-AXI4的转接桥
-        ├── CPU.scala                  # CPU wrapper，将会按照SoC端口规范实例化一个CPU实例
-        ├── PS2.scala                  # PS2 wrapper，将会实例化Verilog版本的PS2控制器
-        ├── RAM.scala                  # RAM wrapper，将会实例化Verilog版本的RAM仿真模型
-        ├── SoC.scala                  # SoC顶层
-        ├── SPI.scala                  # SPI wrapper，将会实例化Verilog版本的SPI控制器
-        └── Uart16550.scala            # UART16550 wrapper，将会实例化Verilog版本的UART16550控制器
+        ├── AXI4ToAPB.scala            # AXI4-APB transfer bridge, which does not support burst and only supports access below 4 bytes
+        ├── ChipLinkBridge.scala       # ChipLink-AXI4 transfer bridge
+        ├── CPU.scala                  # CPU wrapper, which will instantiate a CPU instance according to the SoC port specification
+        ├── PS2.scala                  # PS2 wrapper, which will instantiate the Verilog version of the PS2 controller
+        ├── RAM.scala                  # RAM wrapper, which will instantiate the Verilog version of the RAM simulation model
+        ├── SoC.scala                  # SoC top level
+        ├── SPI.scala                  # SPI wrapper, which will instantiate the Verilog version of the SPI controller
+        └── Uart16550.scala            # UART16550 wrapper, which will instantiate the Verilog version of the UART16550 controller
     ```
-> 注意：编译时需要使用Java 11，高版本的Java会抛出异常，具体见：https://github.com/chipsalliance/rocket-chip/issues/2789
+> Note: You need to use Java 11 when compiling. Higher versions of Java will throw exceptions. For details, see: https://github.com/chipsalliance/rocket-chip/issues/2789
 
-## 致谢和声明
-* AXI4 crossbar (来源于Rocket Chip项目, 已在计算所团队的项目中经过流片验证)。
-* ChipLink (来源于[sifive-blocks](https://github.com/sifive/sifive-blocks/tree/master/src/main/scala/devices/chiplink), 已在计算所团队的项目中经过流片验证)。
-* UART16550 (来源于OpenCores, 已在计算所团队的项目中经过流片验证)。
-* SPI控制器 (来源于OpenCores, 已在计算所团队的项目中经过流片验证)。
-* SoC集成 (基于diplomacy DSL实现)。
-* 感谢[李国旗(ysyx_22040228)](https://github.com/xunqianxun)同学的对接测试，李国旗帮忙测试出flash版本乘除法测试的访存宽度bug，总结了AXI调试过程中的经验。在介绍本框架时也是使用李国旗同学的核进行举例的。
-* 感谢[郑永煜(ysyx_22040450)](./)同学对代码规范检查脚本提出的修改意见。
-* 感谢[万子琦(ysyx_22040698)](./)同学对README.md中的错别字的提示。
-* 感谢[丁亚伟(ysyx_22040561)](./)同学指出ysyxSoCFull.v文件中的核顶层文件名错误和提交脚本换行的问题。
-* 感谢[卢琨(ysyx_22041812)](./)同学提出一个更好对chisel中的寄存器进行复位检查的命令。
-* 感谢[汪洵(ysyx_22040053)](./)同学发现sdl2图片加载地址的非法内存访问bug并提供了代码修改。
-* 感谢[卢琨(ysyx_22041812)](./)同学发现chisel中只使用`grep reset`检查的不完备性并提出相应的调试建议。
+## Acknowledgments and Statement
+* AXI4 crossbar (from the Rocket Chip project, it has been tape-out verified in the project of the Computing Institute team).
+* ChipLink (from [sifive-blocks](https://github.com/sifive/sifive-blocks/tree/master/src/main/scala/devices/chiplink), it has been tape-out verified in the project of the Computing Institute team.).
+* UART16550 (from OpenCores, it has been tape-out verified in the project of the Computing Institute team).
+* SPI controller (from OpenCores, it has been tape-out verified in the project of the Computing Institute team).
+* SoC integration (implemented based on diplomacy DSL).
+* Thanks to [Guoqi Li (ysyx_22040228)](https://github.com/xunqianxun) for the docking test. Guoqi Li helped test out the memory access width bug in the multiplication and division test of the flash version, and summarized the experience in the AXI debugging process. When introducing this framework, We also used Guoqi Li’s core as an example.
+* Thanks to [Yongyu Zheng (ysyx_22040450)](./) for his suggestions on modifying the code specification checking script.
+* Thanks to [Ziqi Wan (ysyx_22040698)](./) for the tip on typos in README.md.
+* Thanks to [Yawei Ding (ysyx_22040561)](./) for pointing out the core top-level file name error in the ysyxSoCFull.v file and the newline bug in the submission script.
+* Thanks to [Kun Lu (ysyx_22041812)](./) for proposing a better command to reset the register in chisel.
+* Thanks to [Xun Wang (ysyx_22040053)](./) for discovering the illegal memory access bug in the sdl2 image loading address and providing code modifications.
+* Thanks to [Kun Lu (ysyx_22041812)](./) for discovering the incompleteness of only using `grep reset` to check in chisel and for making corresponding debugging suggestions.
 
-## 参考
-[1] [FDU NSCSCC 附加资料：组合逻辑环与UNOPT(GPL-3.0)](https://fducslg.github.io/ICS-2021Spring-FDU/misc/unopt.html)<span id="id_verilator_unopt"></span>
+## Reference
+[1] [FDU NSCSCC Additional Information: Combinational Logic Rings and UNOPT (GPL-3.0)](https://fducslg.github.io/ICS-2021Spring-FDU/misc/unopt.html)<span id="id_verilator_unopt" ></span>
 
-[2] [FDU NSCSCC 附加资料：Verilator仿真(GPL-3.0)](https://fducslg.github.io/ICS-2021Spring-FDU/misc/verilate.html?highlight=sdl#verilator-%E4%BB%BF%E7%9C%9F)<span id="id_verilator_sim"></span>
+[2] [FDU NSCSCC Additional Information: Verilator Simulation (GPL-3.0)](https://fducslg.github.io/ICS-2021Spring-FDU/misc/verilate.html?highlight=sdl#verilator-%E4%BB%BF%E7%9C%9F)<span id="id_verilator_sim"></span>
 
-[3] [FDU NSCSCC 附加资料：周期精确仿真(GPL-3.0)](https://fducslg.github.io/ICS-2021Spring-FDU/misc/verilate.html?highlight=sdl#%E5%91%A8%E6%9C%9F%E7%B2%BE%E7%A1%AE%E4%BB%BF%E7%9C%9F)<span id="id_verilator_cycle"></span>
+[3] [FDU NSCSCC Additional Information: Cycle Accurate Simulation (GPL-3.0)](https://fducslg.github.io/ICS-2021Spring-FDU/misc/verilate.html?highlight=sdl#%E5%91%A8%E6%9C%9F%E7%B2%BE%E7%A1%AE%E4%BB%BF%E7%9C%9F)<span id="id_verilator_cycle"></span>
 
-[4] [KuangjuX Blog Verilator学习笔记(CC BY-NC-SA 4.0)](http://blog.kuangjux.top/2022/02/20/verilator-learning/)<span id="id_verilator_intro"></span>
+[4] [KuangjuX Blog Verilator Learning Notes (CC BY-NC-SA 4.0)](http://blog.kuangjux.top/2022/02/20/verilator-learning/)<span id="id_verilator_intro"></span>
