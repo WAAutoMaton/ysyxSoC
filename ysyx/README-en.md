@@ -118,7 +118,7 @@ Run the script to perform the naming specification check. The script will check 
     * Confirm that the asynchronous reset trigger in the code has been removed, or synchronous evacuation has been implemented.
         * **Chisel welfare：Chisel generates synchronous reset triggers by default**
 * For unused core top-level ports (io_interrupt and AXI4 slave) except the SRAM port, the output port needs to be set to `0` and the input port is left floating.
-> Note: Although the simulation efficiency of open source Verilator is much higher than that of commercial simulators (such as VCS). However, Verilator's support for SystemVerilog is not yet complete, and its inspection of RTL code is also optimistic. For this reason, we will use VCS to simulate the cores submitted by the students again before officially starting the back-end design. In order to avoid simulation problems caused by inconsistent simulation behavior between **Verilator and VCS**, <sup>[[2]](#id_verilator_sim)</sup>**please `avoid` using the following content in your own core:**
+> Note: Although the simulation efficiency of open source Verilator is much higher than that of commercial simulators (such as VCS). However, Verilator's support for SystemVerilog is not yet complete, and its inspection of RTL code is also optimistic. For this reason, we will use VCS to simulate the cores submitted by the students again before officially starting the back-end design. In order to avoid simulation problems caused by **inconsistent simulation behavior between Verilator and VCS**, <sup>[[2]](#id_verilator_sim)</sup>**please `avoid` using the following content in your own core:**
 * Non-synthesizable syntax, such as delay and DPI-C.
 * initial statement.
 * unpacked array, structure.
