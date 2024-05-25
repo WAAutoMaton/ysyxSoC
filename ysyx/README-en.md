@@ -70,7 +70,7 @@ Careful students may find that `main.py` is actually implemented by calling Make
 
 > Note: it is recommended to run `main.py` with `python3` instead of `python2`.
 
-## Some preparation
+## Some Preparation
 In order to use `main.py` to test, you need:
 * Merge CPU codes into a `.v` file, file name is `ysyx_[8-bit student number].v`, such as `ysyx_22040228`.
     * It can be implemented on Linux by using the `cat` command:
@@ -78,7 +78,7 @@ In order to use `main.py` to test, you need:
     $> cat CPU.v ALU.v regs.v ... > ysyx_22040228.v
     ```
 * Modify the top-level name of CPU to `ysyx_[8-bit student number].v`, such as `ysyx_22040228.v`.
-* Modify the top-level's port name of CPU according to [CPU port naming specification](./stand/interface.md).
+* Modify the top-level's port name of CPU according to [CPU Port Naming Specification](./stand/interface.md).
 * Add `ysyx_[8-bit student number]_` prefix to all module names of CPU.
     * Such as `module ALU` is modified to `module ysyx_22040228_ALU`.
     * Chisel welfare: We provide a [firrtl transform](./utils/AddModulePrefix.scala) to automatically add module name prefix, for usage, refer to [related documentations](./utils/README.md).
@@ -96,7 +96,7 @@ Run the script to perform the naming specification check. The script will check 
     $> Your core is FINE in module name and signal interface
     ```
 * At the same time, the log file `check.log` will be generated under the `./stand`. If the test fails, an error message will be given and whether it is a `module name` error or a `signal interface` error. You can also open the generated `check.log` log file to view the error reason and prompts.
-> Note: The port definition of the processor core must be modified strictly in accordance with the [CPU port naming convention](./stand/interface.md). **There can be no redundant comments in the port, nor between `input` and `output` Add extra `wire` after it. In addition, other custom signals are not allowed in the interface**, otherwise it may cause problems in subsequent tests. In addition, the One Student One Chip 4th SoC uses the shared SRAM method to implement Cache, so 8 additional sets of SRAM interfaces need to be added to the CPU port. The specific method is as follows [CPU Internal Modification](#cpu-internal-modification-completed-before-20221007-235959-beijing-time).
+> Note: The port definition of the processor core must be modified strictly in accordance with the [CPU Port Naming Convention](./stand/interface.md). **There can be no redundant comments in the port, nor between `input` and `output` Add extra `wire` after it. In addition, other custom signals are not allowed in the interface**, otherwise it may cause problems in subsequent tests. In addition, the One Student One Chip 4th SoC uses the shared SRAM method to implement Cache, so 8 additional sets of SRAM interfaces need to be added to the CPU port. The specific method is as follows [CPU Internal Modification](#cpu-internal-modification-completed-before-20221007-235959-beijing-time).
 
 ## CPU Internal Modification (Completed before 2022/10/07 23:59:59, Beijing time)
 * All triggers need to have a reset port so that they have an initial value after reset.
@@ -111,7 +111,6 @@ Run the script to perform the naming specification check. The script will check 
     * Confirm that the size of the data array of ICache and DCache is not greater than 4KB, and the sum is not greater than 8KB.
     * Confirm that the data array of ICache and DCache both use single-port RAM.
     * Port replacement of the data array: We provide a simplified behavioral model consistent with the RAM port used for tape-out, using the [single-port RAM model with write mask](./ram/S011HD1P_X32Y2D128_BW.v). `ysyxSoCFull.v` has integrated 8 RAMs with write mask on the top level. The specification of each RAM is 128X64bits, totaling 8KB. **Students need to replace the Cache with the SRAM port that accesses the top layer of the core**.
-    >注意：实现大于8KB Cache的核要对Cache大小进行删减，小于8KB的核仍要保留核顶层中不用的端口。实现小于8KB的核将核顶层不用的SRAM端口使能接口置无效，输入悬空，输出地址、数据信号置`0`。**RAM的写掩码为低有效**，如果同学们在接入我们提供的**带写掩码**的RAM时不需要使用该RAM的写掩码，则需将该RAM的写掩码置`1`(置无效)。另外tag array无需替换，**而且不允许在核内自行例化RAM进行其他设计**，同时需要同学们自行维护程序加载时的Cache一致性。具体RAM的端口定义请见[这里](./ram/README.md)。
     > Note: Cores that implement a Cache larger than 8KB must reduce the Cache size, and cores that implement a Cache smaller than 8KB must still retain unused ports in the top layer of the core. To implement a core smaller than 8KB, disable the unused SRAM port enable interface on the top layer of the core, leave the input floating, and set the output address and data signals to `0`. **The write mask of RAM is low effective**. If students do not need to use the write mask of the RAM when accessing the RAM with **write mask** provided by us, they need to set the write mask of the RAM to `1` (disable it). In addition, the tag array does not need to be replaced, and it is not allowed to instantiate RAM in the core for other designs. At the same time, students need to maintain the cache consistency when loading the program. For specific RAM port definitions, please see [here](./ram/README.md).
 * If you use Verilog/SystemVerilog to develop, you need:
     * Confirm that the latch in the code has been removed.
@@ -119,7 +118,7 @@ Run the script to perform the naming specification check. The script will check 
     * Confirm that the asynchronous reset trigger in the code has been removed, or synchronous evacuation has been implemented.
         * **Chisel welfare：Chisel generates synchronous reset triggers by default**
 * For unused core top-level ports (io_interrupt and AXI4 slave) except the SRAM port, the output port needs to be set to `0` and the input port is left floating.
-> Note: Although the simulation efficiency of open source Verilator is much higher than that of commercial simulators (such as VCS). However, Verilator's support for SystemVerilog is not yet complete, and its inspection of RTL code is also optimistic. For this reason, we will use VCS to simulate the cores submitted by the students again before officially starting the back-end design. In order to avoid simulation problems caused by inconsistent simulation behavior between **Verilator and VCS**, <sup>[[2]](#id_verilator_sim)</sup>**please `avoid` using the following content in your own core: **
+> Note: Although the simulation efficiency of open source Verilator is much higher than that of commercial simulators (such as VCS). However, Verilator's support for SystemVerilog is not yet complete, and its inspection of RTL code is also optimistic. For this reason, we will use VCS to simulate the cores submitted by the students again before officially starting the back-end design. In order to avoid simulation problems caused by inconsistent simulation behavior between **Verilator and VCS**, <sup>[[2]](#id_verilator_sim)</sup>**please `avoid` using the following content in your own core:**
 * Non-synthesizable syntax, such as delay and DPI-C.
 * initial statement.
 * unpacked array, structure.
@@ -131,10 +130,8 @@ Run the script to perform the naming specification check. The script will check 
 * Asynchronous reset and cross-clock domain.
 * Try to block the global clock signal.
 
-> 注意，再强调一下：
 > Note, let we emphasize again:
 > 1. All registers **must be reset**, otherwise the students' core may pass the Verilator test, but not the VCS test. For example, during the VCS simulation stage, the Cache that students core may have problems in the simulation. One possible reason is that the Cache register forgot to reset when performing a write-back operation, resulting in an unknown state that cannot be selected.
-> 2. AXI4总线**不要只用ready作为切换状态的信号**，**因为在VCS上进行仿真的SoC默认ready是一直拉高的**，可能会导致同学们的核在VCS仿真下出现AXI4握手和状态机切换问题。
 > 2. For AXI4 bus, **don’t just use ready as the signal to switch the state**, **because the default ready of SoC simulated on VCS is always pulled high**, which may cause AXI4 handshake and state machine switching problems in students' cores under VCS simulation.
 
 ## Code Specification Check (Completed before 2022/10/07 23:59:59, Beijing time)
@@ -174,7 +171,7 @@ The One Student One Chip 4th SoC framework will use Verilator for integration te
 * To access external interrupts, students need to **design their own arbitration logic** (the top layer of the core has reserved the io_interrupt interface, which will be led from the SoC and connected to the FPGA through ChipLink. Students need to design their own arbitration logic to implement PLIC on the FPGA. When the core receives an interrupt, it will jump to the exception handler, and then read the relevant registers of ChipLink MMIO to view the interrupt source information and respond. After the exception is handled, the interrupt source can be cleared by writing to the relevant registers of ChipLink MMIO. **The external interrupt function is optional, but if it is not implemented, the io_interrupt interface must still be retained**).
 * VGA and Frame Buffer ranges of MMIO addresses will access vga ctrl. 0x1000_2000~0x1000_2fff is to access the axi4 slave port of vga for function configuration. The frame buffer of vga is actually stored in memory, but we want to write to the frame buffer through the MMIO bus, so a mapping module is added to the vga module, and the processor sends the write of a certain pixel to the MMIO Frame On the address of the Buffer, vga adds an offset to this address to obtain the address of the pixel in the memory, and forwards the read and write requests to the memory through its own axi4 host port.
 * Access to the devices designed by students needs to be implemented in the core and the device registers are allocated to the **Reserve address range**.
-> Note: There are no functional registers related to the SoC clock and pins in the address space of the 4th session SoC, which means that it is not supported to set SoC related parameters by accessing a certain address through software.
+> Note: There are no functional registers related to the SoC clock and pins in the address space of the 4th session SoC, **which means that it is not supported to set SoC related parameters by accessing a certain address through software**.
 
 ### Verilator Simulation Requirements Are as Follows:
 * Use Verilator to correctly compile your own core `ysyx_[8-bit student number].v` and `ysyxSoCFull.v` into the executable simulation program `emu`.
@@ -221,7 +218,7 @@ The previous section [Verilator Simulation Requirements](#verilator-simulation-r
     $> ./main.py -t APP_TYPE APP_NAME SOC_SIM_MODE SOC_WAV_MODE
     ```
     To simulate a specific test program, the optional values ​​of `APP_TYPE` are `flash` and `mem`, which represent the two startup methods of flash and memory loading respectively. Optional values for `APP_NAME` include `hello`, `memtest`, `rtthread`, etc. See the list of `-t` options in `./main.py -h` for all supported program names. The optional values ​​of `SOC_SIM_MODE` are `cmd` and `gui`, which respectively represent the simulation execution environment. `cmd` represents the command line execution environment. The program will output the simulation results on the command line. `gui` represents the graphical execution environment, and the program will use SDL2 to graphically interactively display RTL data. Optional values for `SOC_WAV_MODE` are `no-wave` and `wave`. For example, running `./main.py -t flash hello cmd no-wave` can simulate the hello test program of the command line execution environment in flash mode without outputting the waveform. Run `./main.py -t mem hello cmd wave` to simulate the hello test program of the command line execution environment in flash mode and output the waveform. The path of the waveform file is `./ysyx/soc.wave`. The default format of the waveform is `FST`. FST is a binary waveform format developed by GTKWave itself. It is smaller in size than VCD files. Run `./main.py -t mem kdb gui` to simulate the keyboard test program of the graphical execution environment in mem loading mode.
-    > Note: **All test programs can only be run in one execution environment. For details on which environment to run, see [Document](./prog/README.md)**. If you need to output a wave file in VCD format, you only need to change `WAVE_FORMAT ?= FST` to `WAVE_FORMAT ?= VCD` at the beginning of [./sim/Makefile](./sim/Makefile), and then recompile. **One thing that needs to be emphasized is that after using the `wave` option to enable waveform output, the program running time will become longer. If the program ends without running out the results, please modify the "preset running time" introduced in the following section.**
+    > Note: **All test programs can only be run in one execution environment. For details on which environment to run, see [document](./prog/README.md)**. If you need to output a wave file in VCD format, you only need to change `WAVE_FORMAT ?= FST` to `WAVE_FORMAT ?= VCD` at the beginning of [./sim/Makefile](./sim/Makefile), and then recompile. **One thing that needs to be emphasized is that after using the `wave` option to enable waveform output, the program running time will become longer. If the program ends without running out the results, please modify the "preset running time" introduced in the following section.**
 * Run `./main.py -r` and `./main.py -fr` to run the regression test of flash normal mode and fast mode in sequence. The regression test only tests the program in the `cmd` execution environment, programs in the `gui` execution environment are not subject to regression testing.
 * During the testing process, we set a **preset running time** for each test. When the program exceeds the **preset running time**, it will stop running on its own. Students can modify `./main.py`:
     ```python
@@ -317,7 +314,7 @@ Starting from the second batch of the 4th session, the project team **no longer 
         ├── SPI.scala                  # SPI wrapper, which will instantiate the Verilog version of the SPI controller
         └── Uart16550.scala            # UART16550 wrapper, which will instantiate the Verilog version of the UART16550 controller
     ```
-> Note: You need to use Java 11 when compiling. Higher versions of Java will throw exceptions. For details, see: https://github.com/chipsalliance/rocket-chip/issues/2789
+> Note: You need to use Java 11 when compiling. Higher versions of Java will throw exceptions. For details, see: https://github.com/chipsalliance/rocket-chip/issues/2789.
 
 ## Acknowledgments and Statement
 * AXI4 crossbar (from the Rocket Chip project, it has been tape-out verified in the project of the Computing Institute team).
