@@ -97,6 +97,17 @@ class ysyxSoCASIC(implicit p: Parameters) extends LazyModule {
     gpio <> lgpio.module.gpio_bundle
     ps2 <> lkeyboard.module.ps2_bundle
     vga <> lvga.module.vga_bundle
+
+    val io = IO(new Bundle{
+      val test_pc = Output(UInt(32.W))
+      val test_regs = Output(Vec(32, UInt(32.W)))
+      val test_csr = Output(Vec(4, UInt(32.W)))
+      val test_imem_en = Output(Bool())
+    })
+    io.test_pc := cpu.module.io.test_pc
+    io.test_regs := cpu.module.io.test_regs
+    io.test_csr := cpu.module.io.test_csr
+    io.test_imem_en := cpu.module.io.test_imem_en
   }
 }
 
@@ -155,5 +166,16 @@ class ysyxSoCFull(implicit p: Parameters) extends LazyModule {
     externalPins.ps2 <> masic.ps2
     externalPins.vga <> masic.vga
     externalPins.uart <> masic.uart
+
+    val io = IO(new Bundle{
+      val test_pc = Output(UInt(32.W))
+      val test_regs = Output(Vec(32, UInt(32.W)))
+      val test_csr = Output(Vec(4, UInt(32.W)))
+      val test_imem_en = Output(Bool())
+    })
+    io.test_pc := asic.module.io.test_pc
+    io.test_regs := asic.module.io.test_regs
+    io.test_csr := asic.module.io.test_csr
+    io.test_imem_en := asic.module.io.test_imem_en
   }
 }
