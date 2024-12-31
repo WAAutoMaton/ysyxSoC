@@ -1,6 +1,5 @@
 // define this macro to enable fast behavior simulation
 // for flash by skipping SPI transfers
-//`define FAST_FLASH
 
 module spi_top_apb #(
   parameter flash_addr_start = 32'h30000000,
