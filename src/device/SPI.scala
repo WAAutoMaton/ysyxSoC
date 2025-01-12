@@ -90,7 +90,7 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
         sXipSs -> Mux(mspi.io.in.pready, sXipStart, sXipSs),
         sXipStart -> Mux(mspi.io.in.pready, sXipWait, sXipStart),
         sXipWait -> Mux(mspi.io.in.pready & ~mspi.io.in.prdata(8), sXipRead, sXipWait),
-        sXipRead -> sXipTx0,
+        sXipRead -> Mux(mspi.io.in.pready, sXipIdle, sXipRead),
         )), 
     sXipIdle)
 
@@ -110,7 +110,7 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
     mspi.io.in.pwdata := Mux(isXipMode,
         MuxLookup(xipState, 0.U)(Seq(
         sXipTx0 -> 0.U,
-        sXipTx1 -> ("h300000000".U + (in.paddr & "h00ffffff".U)),
+        sXipTx1 -> (((3.U)<<24) + (in.paddr & "h00ffffff".U)),
         sXipDiv -> 8.U,
         sXipCtrl -> "b10010001000000".U,
         sXipSs -> 1.U,
@@ -119,12 +119,13 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
       0.U)
 
     mspi.io.in.psel := in.psel && (xipState =/= sXipIdle) && isXipMode
-    mspi.io.in.penable := in.penable &&(xipState =/= sXipIdle) && isXipMode
+    mspi.io.in.penable := in.penable && (xipState =/= sXipIdle) && isXipMode
     mspi.io.in.pwrite := xipState =/= sXipIdle && xipState =/= sXipRead && isXipMode
     mspi.io.in.pstrb := "b1111".U
 
     in.pready := xipState === sXipIdle && isXipMode
-    in.prdata := mspi.io.in.prdata
+    val data = mspi.io.in.prdata
+    in.prdata := Cat(Cat(data(7,0), data(15,8)), Cat(data(23,16), data(31,24)))
 
     // 连接 SPI 接口
     spi_bundle <> mspi.io.spi
