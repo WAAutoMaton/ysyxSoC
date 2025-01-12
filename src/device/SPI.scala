@@ -80,6 +80,8 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
     // 检测是否为 XIP 地址范围 (0x3000_0000 ~ 0x3fff_ffff)
     isXipMode := (in.paddr >= "h30000000".U && in.paddr < "h40000000".U)
 
+    assert(!isXipMode || !in.pwrite, "FLASH: Write operation is not supported")
+
     xipState := Mux(isXipMode, 
         MuxLookup(xipState, sXipIdle)( List(
         sXipIdle -> sXipTx0,
