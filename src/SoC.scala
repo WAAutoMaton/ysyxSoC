@@ -86,28 +86,17 @@ class ysyxSoCASIC(implicit p: Parameters) extends LazyModule {
     val spi = IO(chiselTypeOf(lspi.module.spi_bundle))
     val uart = IO(chiselTypeOf(luart.module.uart))
     val psram = IO(chiselTypeOf(lpsram.module.qspi_bundle))
-    val sdram = IO(chiselTypeOf(sdramBundle))
-    val gpio = IO(chiselTypeOf(lgpio.module.gpio_bundle))
-    val ps2 = IO(chiselTypeOf(lkeyboard.module.ps2_bundle))
+    //val sdram = IO(chiselTypeOf(sdramBundle))
+    val gpio = IO(chiselTypeOf(lgpio.module.gpioBundle))
+    val ps2 = IO(chiselTypeOf(lkeyboard.module.ps2Bundle))
     val vga = IO(chiselTypeOf(lvga.module.vga_bundle))
     uart <> luart.module.uart
     spi <> lspi.module.spi_bundle
     psram <> lpsram.module.qspi_bundle
-    sdram <> sdramBundle
-    gpio <> lgpio.module.gpio_bundle
-    ps2 <> lkeyboard.module.ps2_bundle
+    //sdram <> sdramBundle
+    gpio <> lgpio.module.gpioBundle
+    ps2 <> lkeyboard.module.ps2Bundle
     vga <> lvga.module.vga_bundle
-
-    val io = IO(new Bundle{
-      val test_pc = Output(UInt(32.W))
-      val test_regs = Output(Vec(32, UInt(32.W)))
-      val test_csr = Output(Vec(4, UInt(32.W)))
-      val test_imem_en = Output(Bool())
-    })
-    io.test_pc := cpu.module.io.test_pc
-    io.test_regs := cpu.module.io.test_regs
-    io.test_csr := cpu.module.io.test_csr
-    io.test_imem_en := cpu.module.io.test_imem_en
   }
 }
 
@@ -153,8 +142,8 @@ class ysyxSoCFull(implicit p: Parameters) extends LazyModule {
     
     val psram = Module(new psramChisel)
     psram.io <> masic.psram
-    val sdram = Module(new sdramChisel)
-    sdram.io <> masic.sdram
+    //val sdram = Module(new sdramChisel)
+    //sdram.io <> masic.sdram
 
     val externalPins = IO(new Bundle{
       val gpio = chiselTypeOf(masic.gpio)
@@ -166,16 +155,5 @@ class ysyxSoCFull(implicit p: Parameters) extends LazyModule {
     externalPins.ps2 <> masic.ps2
     externalPins.vga <> masic.vga
     externalPins.uart <> masic.uart
-
-    val io = IO(new Bundle{
-      val test_pc = Output(UInt(32.W))
-      val test_regs = Output(Vec(32, UInt(32.W)))
-      val test_csr = Output(Vec(4, UInt(32.W)))
-      val test_imem_en = Output(Bool())
-    })
-    io.test_pc := asic.module.io.test_pc
-    io.test_regs := asic.module.io.test_regs
-    io.test_csr := asic.module.io.test_csr
-    io.test_imem_en := asic.module.io.test_imem_en
   }
 }

@@ -8,6 +8,13 @@ import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.util._
 
+class Print extends BlackBox{
+  val io = IO(new Bundle{
+    val enable = Input(Bool())
+    val data   = Input(UInt(32.W))
+  })
+}
+
 class SPIIO(val ssWidth: Int = 8) extends Bundle {
   val sck = Output(Bool())
   val ss = Output(UInt(ssWidth.W))
@@ -68,7 +75,7 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
     mspi.io.in.pstrb := 0.U
 
     // XIP 相关状态定义
-    val sXipIdle :: sXipTx0 :: sXipTx1 :: sXipDiv :: sXipCtrl :: sXipSs :: sXipStart :: sXipWait :: sXipRead :: Nil = Enum(9)
+    val sXipIdle :: sXipTx0 :: sXipTx1 :: sXipDiv :: sXipCtrl :: sXipSs :: sXipStart :: sXipWait :: sXipRead :: sXipReady:: Nil = Enum(10)
     val xipState = RegInit(sXipIdle)
 
     // XIP 模式寄存器和信号
@@ -77,14 +84,24 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
     val xipData = Reg(UInt(32.W))
     val xipError = RegInit(false.B)
 
+    val enable = RegInit(false.B)
+
+    enable := enable || in.penable
+
     // 检测是否为 XIP 地址范围 (0x3000_0000 ~ 0x3fff_ffff)
     isXipMode := (in.paddr >= "h30000000".U && in.paddr < "h40000000".U)
 
     assert(!isXipMode || !in.pwrite, "FLASH: Write operation is not supported")
 
+    /*
+    val state_prev= RegNext(xipState)
+    val printer = Module(new Print())
+    printer.io.enable := (xipState===sXipTx0 && state_prev=/=sXipTx0)
+    printer.io.data := in.paddr*/
+
     xipState := Mux(isXipMode, 
         MuxLookup(xipState, sXipIdle)( List(
-        sXipIdle -> sXipTx0,
+        sXipIdle -> Mux(in.penable, sXipTx0, sXipIdle),
         sXipTx0 -> Mux(mspi.io.in.pready, sXipTx1, sXipTx0),
         sXipTx1 -> Mux(mspi.io.in.pready, sXipDiv, sXipTx1),
         sXipDiv -> Mux(mspi.io.in.pready, sXipCtrl, sXipDiv),
@@ -92,7 +109,8 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
         sXipSs -> Mux(mspi.io.in.pready, sXipStart, sXipSs),
         sXipStart -> Mux(mspi.io.in.pready, sXipWait, sXipStart),
         sXipWait -> Mux(mspi.io.in.pready & ~mspi.io.in.prdata(8), sXipRead, sXipWait),
-        sXipRead -> Mux(mspi.io.in.pready, sXipIdle, sXipRead),
+        sXipRead -> Mux(mspi.io.in.pready, sXipReady, sXipRead),
+        sXipReady -> sXipIdle
         )), 
     sXipIdle)
 
@@ -123,9 +141,9 @@ class APBSPI(address: Seq[AddressSet])(implicit p: Parameters)
     mspi.io.in.psel := in.psel && (xipState =/= sXipIdle) && isXipMode
     mspi.io.in.penable := in.penable && (xipState =/= sXipIdle) && isXipMode
     mspi.io.in.pwrite := xipState =/= sXipIdle && xipState =/= sXipRead && isXipMode
-    mspi.io.in.pstrb := "b1111".U
+    mspi.io.in.pstrb := Mux(mspi.io.in.pwrite, "b1111".U, 0.U)
 
-    in.pready := xipState === sXipIdle && isXipMode
+    in.pready := xipState === sXipReady && isXipMode
     val data = mspi.io.in.prdata
     in.prdata := Cat(Cat(data(7,0), data(15,8)), Cat(data(23,16), data(31,24)))
 
